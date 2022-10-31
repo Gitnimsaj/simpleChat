@@ -68,7 +68,32 @@ public class ChatClient extends AbstractClient
   {
     try
     {
-      sendToServer(message);
+    	//looking if the message is a command 
+    	if (message.startsWith("#")) {
+    		//if yes strip the white space each side of the string 
+    		message.strip();
+    		
+    		if(message=="#quit") connectionClosed();
+    		else if(message=="#logoff") quit();
+    		
+    		//getting the first 8 char to set the comment setHost 
+    		//or setPort (setPort<5555>) and using the 10e char 
+    		//until before the last one 
+    		else if(message.substring(0, 7 )=="#sethost") {
+    			if(isConnected())setHost(message.substring(9, message.length()-2));
+    			else clientUI.display("This command is invalid while being connected");
+    		}
+    		else if(message.substring(0, 7)=="#setport") {
+    			if(isConnected()) setPort(Integer.parseInt(message.substring(9, message.length()-2)));
+    			else clientUI.display("This command is invalid while being connected");
+    		}
+    		else if(message=="#login") {
+    			if (!isConnected()) openConnection();
+    		}
+    		else if(message=="#gethost")clientUI.display(getHost());
+    		else if(message=="#getport")clientUI.display(""+getPort());
+    		}
+    	else sendToServer(message);
     }
     catch(IOException e)
     {
@@ -77,6 +102,16 @@ public class ChatClient extends AbstractClient
       quit();
     }
   }
+  
+  /**
+	 * Method called after the connection has been closed. 
+	 * It display a message to tell the client that the server is close
+	 * and quit
+	 */
+	protected void connectionClosed() {
+		clientUI.display("The server has stop");
+		quit();
+	}
   
   /**
    * This method terminates the client.

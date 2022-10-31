@@ -18,7 +18,7 @@ import common.*;
  * @author Dr Robert Lagani&egrave;re
  * @version September 2020
  */
-public class ClientConsole implements ChatIF 
+public class ServerConsole implements ChatIF 
 {
   //Class variables *************************************************
   
@@ -29,33 +29,30 @@ public class ClientConsole implements ChatIF
   
   //Instance variables **********************************************
   
-  /**
-   * The instance of the client that created this ConsoleChat.
-   */
-  ChatClient client;
-  
-  
   
   /**
    * Scanner to read from the console
    */
   Scanner fromConsole; 
+  
+  /**
+   * The instance of the EchoServer that created this ServerConsole.
+   */
+	EchoServer server;
 
   
   //Constructors ****************************************************
 
   /**
-   * Constructs an instance of the ClientConsole UI.
+   * Constructs an instance of the ServerConsole UI.
    *
-   * @param host The host to connect to.
    * @param port The port to connect on.
    */
-  public ClientConsole(String host, int port) 
+  public ServerConsole(int port) 
   {
     try 
     {
-      client= new ChatClient(host, port, this);
-      
+    	server = new EchoServer(port);
       
     } 
     catch(IOException exception) 
@@ -86,7 +83,7 @@ public class ClientConsole implements ChatIF
       while (true) 
       {
         message = fromConsole.nextLine();
-        client.handleMessageFromClientUI(message);
+        server (message);
       }
     } 
     catch (Exception ex) 
@@ -104,7 +101,7 @@ public class ClientConsole implements ChatIF
    */
   public void display(String message) 
   {
-    System.out.println("> " + message);
+    System.out.println("SERVER MSG> " + message);
   }
 
   
@@ -142,3 +139,4 @@ public class ClientConsole implements ChatIF
   }
 }
 //End of ConsoleChat class
+
