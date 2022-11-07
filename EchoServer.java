@@ -3,6 +3,9 @@
 // license found at www.lloseng.com 
 
 
+import java.io.IOException;
+
+import common.ChatIF;
 import ocsf.server.*;
 
 /**
@@ -24,6 +27,13 @@ public class EchoServer extends AbstractServer
    */
   final public static int DEFAULT_PORT = 5555;
   
+  
+  /**
+   * The interface type variable.  It allows the implementation of 
+   * the display method in the server.
+   */
+  ChatIF serverUI; 
+  
   //Constructors ****************************************************
   
   /**
@@ -31,9 +41,10 @@ public class EchoServer extends AbstractServer
    *
    * @param port The port number to connect on.
    */
-  public EchoServer(int port) 
+  public EchoServer(int port, ChatIF server) 
   {
     super(port);
+    serverUI = server;
   }
 
   
@@ -48,8 +59,29 @@ public class EchoServer extends AbstractServer
   public void handleMessageFromClient
     (Object msg, ConnectionToClient client)
   {
-    System.out.println("Message received: " + msg + " from " + client);
-    this.sendToAllClients(msg);
+	  
+	String message = (String) msg;
+	serverUI.display("Message received: " + msg + " from " + client.getInfo("loginId"));
+	if (message.startsWith("#login")) {
+		if (client.getInfo("loginId")!=null) {
+			try {
+				client.sendToClient("You are already login, this command should be the first: server closed connection");
+				client.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		else {
+			client.setInfo("loginId", message.substring(7,message.length()-1)); 
+			this.sendToAllClients(client.getInfo("loginId")+" has logged on.");
+		}
+		
+	}
+	else{
+		message = (client.getInfo("loginId") + "> " + (String) msg );
+	    this.sendToAllClients(message);
+	}
   }
     
   /**
@@ -58,7 +90,7 @@ public class EchoServer extends AbstractServer
    */
   protected void serverStarted()
   {
-    System.out.println
+	  serverUI.display
       ("Server listening for connections on port " + getPort());
   }
   
@@ -68,54 +100,27 @@ public class EchoServer extends AbstractServer
    */
   protected void serverStopped()
   {
-    System.out.println
+	  serverUI.display
       ("Server has stopped listening for connections.");
   }
   
  protected void clientConnected(ConnectionToClient client) {
-	 System.out.println
-     ("The client has connected");
+	 serverUI.display
+     (client.getInfo("loginId")+" has logged on.");
   }
  
  synchronized protected void clientDisconnected(ConnectionToClient client) {
-	 System.out.println
-     ("The client has deconnected");
+	 serverUI.display
+     (client.getInfo("loginId")+" has deconnected");
  }
  
+ synchronized protected void clientException(ConnectionToClient client, Throwable exception) {
+	 serverUI.display
+     (client.getInfo("loginId")+" deconnected");
+ }
+ 
+}
  
   
-  //Class methods ***************************************************
-  
-  /**
-   * This method is responsible for the creation of 
-   * the server instance (there is no UI in this phase).
-   *
-   * @param args[0] The port number to listen on.  Defaults to 5555 
-   *          if no argument is entered.
-   */
-  public static void main(String[] args) 
-  {
-    int port = 0; //Port to listen on
 
-    try
-    {
-      port = Integer.parseInt(args[0]); //Get port from command line
-    }
-    catch(Throwable t)
-    {
-      port = DEFAULT_PORT; //Set port to 5555
-    }
-	
-    EchoServer sv = new EchoServer(port);
-    
-     try 
-    {
-      sv.listen(); //Start listening for connections
-    } 
-    catch (Exception ex) 
-    {
-      System.out.println("ERROR - Could not listen for clients!");
-    }
-  }
-}
 //End of EchoServer class

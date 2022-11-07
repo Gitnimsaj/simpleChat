@@ -26,6 +26,11 @@ public class ChatClient extends AbstractClient
    * the display method in the client.
    */
   ChatIF clientUI; 
+  
+  /**
+   * Login id 
+   */
+  String loginId;
 
   
   //Constructors ****************************************************
@@ -38,11 +43,12 @@ public class ChatClient extends AbstractClient
    * @param clientUI The interface type variable.
    */
   
-  public ChatClient(String host, int port, ChatIF clientUI) 
+  public ChatClient(String loginId, String host, int port, ChatIF clientUI) 
     throws IOException 
   {
     super(host, port); //Call the superclass constructor
     this.clientUI = clientUI;
+    this.loginId = loginId;
     openConnection();
   }
 
@@ -64,46 +70,57 @@ public class ChatClient extends AbstractClient
    *
    * @param message The message from the UI.    
    */
-  public void handleMessageFromClientUI(String message)
-  {
-    try
-    {
-    	//looking if the message is a command 
-    	if (message.startsWith("#")) {
-    		//if yes strip the white space each side of the string 
-    		message.strip();
-    		
-    		if(message=="#quit") connectionClosed();
-    		else if(message=="#logoff") quit();
-    		
-    		//getting the first 8 char to set the comment setHost 
-    		//or setPort (setPort<5555>) and using the 10e char 
-    		//until before the last one 
-    		else if(message.substring(0, 7 )=="#sethost") {
-    			if(isConnected())setHost(message.substring(9, message.length()-2));
-    			else clientUI.display("This command is invalid while being connected");
-    		}
-    		else if(message.substring(0, 7)=="#setport") {
-    			if(isConnected()) setPort(Integer.parseInt(message.substring(9, message.length()-2)));
-    			else clientUI.display("This command is invalid while being connected");
-    		}
-    		else if(message=="#login") {
-    			if (!isConnected()) openConnection();
-    		}
-    		else if(message=="#gethost")clientUI.display(getHost());
-    		else if(message=="#getport")clientUI.display(""+getPort());
-    		}
-    	else sendToServer(message);
-    }
-    catch(IOException e)
-    {
-      clientUI.display
-        ("Could not send message to server.  Terminating client.");
-      quit();
-    }
+  public void handleMessageFromClientUI(String message){
+	  clientUI.display(message);
+	  if (message.startsWith("#")) {
+		  
+		try {
+			command(message.strip());
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+			}
+		} else
+		try {
+			sendToServer(message);
+		} catch(IOException e)
+	    {
+		      clientUI.display
+		        ("Could not send message to server.  Terminating client.");
+		      quit();
+		    }
+    
   }
   
   /**
+   * method call to handle command from the clientUI
+   * @param message
+   * @throws IOException
+   */
+  private void command(String message) throws IOException {
+	  if(message.startsWith("#quit")) {
+		  quit();
+	  }
+		else if(message.equals("#logoff")) closeConnection();
+		
+		
+		else if(message.startsWith("#sethost")) {
+			if(isConnected()) clientUI.display("This command is invalid while being connected");
+			else setHost(message.substring(9, message.length()-2));
+		}
+		else if(message.startsWith("#setport")) {
+			if(isConnected()) clientUI.display("This command is invalid while being connected"); 
+			else setPort(Integer.parseInt(message.substring(9, message.length()-2)));
+		}
+		else if(message.equals("#login")) {
+			if (!isConnected()) openConnection();
+		}
+		else if(message.equals("#gethost"))clientUI.display(getHost());
+		else if(message.equals("#getport"))clientUI.display(""+getPort());
+}
+
+
+/**
 	 * Method called after the connection has been closed. 
 	 * It display a message to tell the client that the server is close
 	 * and quit
@@ -112,6 +129,32 @@ public class ChatClient extends AbstractClient
 		clientUI.display("The server has stop");
 		quit();
 	}
+	
+	/**
+	 * method called each time an exception is thrown by the client's
+	 * thread that is waiting for messages from the server.
+	 * 
+	 * @param exception
+	 *            the exception raised.
+	 */
+	protected void connectionException(Exception exception) {
+		clientUI.display("The server has stop");
+		quit();
+	}
+	
+	
+	/**
+	 * method called after a connection has been established.
+	 */
+	protected void connectionEstablished() {
+		try {
+			sendToServer("#login<"+loginId+">");
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
   
   /**
    * This method terminates the client.

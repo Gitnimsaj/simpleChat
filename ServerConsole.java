@@ -4,7 +4,6 @@
 
 import java.io.*;
 import java.util.Scanner;
-
 import client.*;
 import common.*;
 
@@ -50,17 +49,15 @@ public class ServerConsole implements ChatIF
    */
   public ServerConsole(int port) 
   {
-    try 
-    {
-    	server = new EchoServer(port);
-      
-    } 
-    catch(IOException exception) 
-    {
-      System.out.println("Error: Can't setup connection!"
-                + " Terminating client.");
-      System.exit(1);
-    }
+
+    	server = new EchoServer(port, this);
+    	try {
+			server.listen();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
     
     // Create scanner object to read from console
     fromConsole = new Scanner(System.in); 
@@ -71,7 +68,7 @@ public class ServerConsole implements ChatIF
   
   /**
    * This method waits for input from the console.  Once it is 
-   * received, it sends it to the client's message handler.
+   * received, it sends it to the server's message handler.
    */
   public void accept() 
   {
@@ -83,7 +80,12 @@ public class ServerConsole implements ChatIF
       while (true) 
       {
         message = fromConsole.nextLine();
-        server (message);
+        display(message);
+        
+        if (message.startsWith("#")) {
+        	command(message);
+        }
+    	else server.sendToAllClients("SERVER MSG> "+message);
       }
     } 
     catch (Exception ex) 
@@ -94,6 +96,36 @@ public class ServerConsole implements ChatIF
   }
 
   /**
+   * method call to handle commands
+   * @param message
+   * @throws IOException
+   */
+  private void command(String message) throws IOException {
+
+	  if(message.equals("#quit")) {
+  		  server.close();
+  		  System.exit(0);
+  	  }
+  		else if(message.equals("#stop")) server.stopListening();
+  		else if(message.equals("#close")){
+  			server.close();
+  			}
+
+  		else if(message.startsWith("setport")) {
+  			if(server.isListening() || server.getNumberOfClients()!=0) display("This command is invalid while the server is open");
+  			else server.setPort(Integer.parseInt(message.substring(9, message.length()-2)));
+  		}
+  		else if(message.equals("#start")) {
+  			if(server.isListening()) display("Server is already listening to connection");
+  			else server.listen();
+  		}
+  		else if(message.equals("#getport")) {
+  			display(""+server.getPort());
+  		}
+}
+
+
+/**
    * This method overrides the method in the ChatIF interface.  It
    * displays a message onto the screen.
    *
@@ -102,39 +134,25 @@ public class ServerConsole implements ChatIF
   public void display(String message) 
   {
     System.out.println("SERVER MSG> " + message);
-  }
+    }
 
   
   //Class methods ***************************************************
-  
-  /**
-   * This method is responsible for the creation of the Client UI.
-   *
-   * @param args[0] The host to connect to.
-   */
+ 
   public static void main(String[] args) 
   {
-    String host = "";
+
     int port = DEFAULT_PORT;
 
-
     try
     {
-      host = args[0];
-    }
-    catch(ArrayIndexOutOfBoundsException e)
-    {
-      host = "localhost";
-    }
-    try
-    {
-      port = Integer.parseInt(args[1]);
+      port = Integer.parseInt(args[0]);
     }
     catch(ArrayIndexOutOfBoundsException e)
     {
     }
     
-    ClientConsole chat= new ClientConsole(host, port);
+    ServerConsole chat= new ServerConsole(port);
     chat.accept();  //Wait for console data
   }
 }
